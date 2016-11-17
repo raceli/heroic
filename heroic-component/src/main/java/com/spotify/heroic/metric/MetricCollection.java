@@ -21,11 +21,17 @@
 
 package com.spotify.heroic.metric;
 
+import com.spotify.heroic.HeroicInstrumentation;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
+import com.spotify.heroic.ObjectLifecycleMonitor;
+import com.spotify.heroic.ObjectLifecycleMonitorProvider;
 import com.spotify.heroic.aggregation.AggregationSession;
 import com.spotify.heroic.common.Series;
+import java.lang.instrument.Instrumentation;
+import javax.inject.Inject;
+import javax.naming.ServiceUnavailableException;
 import lombok.AccessLevel;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -34,6 +40,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
+import lombok.extern.slf4j.Slf4j;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -67,11 +74,38 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * @see Event
  * @see MetricGroup
  */
+@Slf4j
 @Data
-@RequiredArgsConstructor(access = AccessLevel.PACKAGE)
+//@RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 public abstract class MetricCollection {
+
     final MetricType type;
     final List<? extends Metric> data;
+    static boolean fallbackToManualByteCounts = false;
+
+    public MetricCollection(final MetricType type, final List<? extends Metric> data) {
+        this.type = type;
+        this.data = data;
+
+        long numBytes = 0;
+        if (!fallbackToManualByteCounts) {
+            try {
+                for (Metric m : data) {
+                    numBytes += HeroicInstrumentation.getObjectSize(m);
+                }
+            } catch (ServiceUnavailableException e) {
+                fallbackToManualByteCounts = true;
+                log.info("HeroicInstrumentation is not available - falling back to manual estimates");
+            }
+        }
+        if (fallbackToManualByteCounts) {
+            for (Metric m : data) {
+                numBytes += m.inMemoryByteSize();
+            }
+        }
+
+        ObjectLifecycleMonitorProvider.get().registerObject(this, "MetricCollection#" + type.identifier(), numBytes);
+    }
 
     /**
      * Helper method to fetch a collection of the given type, if applicable.
