@@ -24,6 +24,7 @@ package com.spotify.heroic.http.query;
 import com.google.common.collect.ImmutableMap;
 import com.spotify.heroic.Query;
 import com.spotify.heroic.QueryManager;
+import com.spotify.heroic.http.query.CoreQueryRequestMetadataFactory;
 import com.spotify.heroic.common.JavaxRestFramework;
 import com.spotify.heroic.metric.QueryResult;
 import eu.toolchain.async.AsyncFramework;
@@ -69,10 +70,12 @@ public class QueryResource {
     @Consumes(MediaType.TEXT_PLAIN)
     public void metricsText(
         @Suspended final AsyncResponse response, @QueryParam("group") String group,
-        @Context HttpServletRequest servletRequest, String query
+        @Context HttpServletRequest servletReq, String query
     ) {
-        final Query q = this.query.newQueryFromString(query).build();
-        q.setRequestMetadata(Optional.of(CoreQueryRequestMetadataFactory.create(servletRequest)));
+        final Query q = this.query.newQueryFromString(query)
+            .queryRequestMetadata(Optional.of(CoreQueryRequestMetadataFactory.create(servletReq)))
+            .build();
+
 
         final QueryManager.Group g = this.query.useOptionalGroup(Optional.ofNullable(group));
         final AsyncFuture<QueryResult> callback = g.query(q);
@@ -85,10 +88,11 @@ public class QueryResource {
     @Consumes(MediaType.APPLICATION_JSON)
     public void metrics(
         @Suspended final AsyncResponse response, @QueryParam("group") String group,
-        @Context HttpServletRequest servletRequest, QueryMetrics query
+        @Context HttpServletRequest servletReq, QueryMetrics query
     ) {
-        final Query q = query.toQueryBuilder(this.query::newQueryFromString).build();
-        q.setRequestMetadata(Optional.of(CoreQueryRequestMetadataFactory.create(servletRequest)));
+        final Query q = query.toQueryBuilder(this.query::newQueryFromString)
+            .queryRequestMetadata(Optional.of(CoreQueryRequestMetadataFactory.create(servletReq)))
+            .build();
 
         final QueryManager.Group g = this.query.useOptionalGroup(Optional.ofNullable(group));
         final AsyncFuture<QueryResult> callback = g.query(q);
@@ -100,7 +104,7 @@ public class QueryResource {
     @Path("batch")
     public void metrics(
         @Suspended final AsyncResponse response, @QueryParam("backend") String group,
-        @Context HttpServletRequest servletRequest, final QueryBatch query
+        @Context HttpServletRequest servletReq, final QueryBatch query
     ) {
         final QueryManager.Group g = this.query.useOptionalGroup(Optional.ofNullable(group));
 
@@ -112,9 +116,9 @@ public class QueryResource {
                     .getValue()
                     .toQueryBuilder(this.query::newQueryFromString)
                     .rangeIfAbsent(query.getRange())
+                    .queryRequestMetadata(Optional.of(CoreQueryRequestMetadataFactory.create(
+                        servletReq)))
                     .build();
-                q.setRequestMetadata(Optional.of(CoreQueryRequestMetadataFactory.
-                    create(servletRequest)));
 
                 futures.add(g.query(q).directTransform(r -> Pair.of(e.getKey(), r)));
             }

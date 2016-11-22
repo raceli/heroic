@@ -164,6 +164,7 @@ public class QueryResult {
         String json = "{" +
                       " \"@timestamp\": \"" + currentTimeAsISO + "\"," +
                       " \"@message\": {" +
+                      " \"UUID\": \"" + requestMetadata.getQueryId() + "\"," +
                       " \"numQueriesAboveThreshold\": " + currQueriesAboveThreshold + "," +
                       " \"totalQueries\": " + totalQueriesProcessed + "," +
                       " \"numDataPoints\": " + totalDataPoints + "," +
