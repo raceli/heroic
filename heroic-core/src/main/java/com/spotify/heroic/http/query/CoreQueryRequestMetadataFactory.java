@@ -29,7 +29,7 @@ public class CoreQueryRequestMetadataFactory {
     public static QueryRequestMetadata create(HttpServletRequest httpServletRequest) {
         String userAgent = httpServletRequest.getHeader("User-Agent");
         String clientId = httpServletRequest.getHeader("X-Alient-Client-Id");
-        return new QueryRequestMetadata(httpServletRequest.getRemoteAddr(),
+        return QueryRequestMetadata.of(httpServletRequest.getRemoteAddr(),
                                         httpServletRequest.getRemoteHost(),
                                         httpServletRequest.getRemotePort(),
                                         userAgent == null ? "" : userAgent,
