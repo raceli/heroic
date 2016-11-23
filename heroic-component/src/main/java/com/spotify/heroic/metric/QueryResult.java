@@ -23,7 +23,7 @@ package com.spotify.heroic.metric;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.spotify.heroic.QueryRequestMetadata;
+import com.spotify.heroic.QueryOriginContext;
 import com.spotify.heroic.aggregation.AggregationCombiner;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.OptionalLimit;
@@ -87,7 +87,7 @@ public class QueryResult {
         final QueryTrace.Identifier what, final DateRange range, final AggregationCombiner combiner,
         final OptionalLimit groupLimit,
         final FullQuery.Request request,
-        final QueryRequestMetadata requestMetadata,
+        final QueryOriginContext requestMetadata,
         final boolean logQueries,
         final OptionalLimit logQueriesThresholdDataPoints
 
@@ -130,7 +130,7 @@ public class QueryResult {
     }
 
     public void logQueryInfo(final FullQuery.Request request,
-                             final QueryRequestMetadata requestMetadata,
+                             final QueryOriginContext requestMetadata,
                              final boolean logQueries,
                              final OptionalLimit logQueriesThresholdDataPoints
     ) {

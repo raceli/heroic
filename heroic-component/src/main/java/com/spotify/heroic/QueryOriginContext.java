@@ -27,7 +27,7 @@ import lombok.Data;
 
 @AllArgsConstructor
 @Data
-public class QueryRequestMetadata {
+public class QueryOriginContext {
     private final String remoteAddr;
     private final String remoteHost;
     private final int    remotePort;
@@ -35,16 +35,16 @@ public class QueryRequestMetadata {
     private final String remoteClientId;
     private final UUID   queryId;
 
-    public static QueryRequestMetadata of() {
-        return new QueryRequestMetadata("", "", 0, "", "", UUID.randomUUID());
+    public static QueryOriginContext of() {
+        return new QueryOriginContext("", "", 0, "", "", UUID.randomUUID());
     }
 
-    public static QueryRequestMetadata of(final String  remoteAddr,
-                                final String  remoteHost,
-                                final int     remotePort,
-                                final String  remoteUserAgent,
-                                final String  remoteClientId) {
-        return new QueryRequestMetadata(remoteAddr, remoteHost, remotePort, remoteUserAgent,
-                                        remoteClientId, UUID.randomUUID());
+    public static QueryOriginContext of(final String  remoteAddr,
+                                        final String  remoteHost,
+                                        final int     remotePort,
+                                        final String  remoteUserAgent,
+                                        final String  remoteClientId) {
+        return new QueryOriginContext(remoteAddr, remoteHost, remotePort, remoteUserAgent,
+                                      remoteClientId, UUID.randomUUID());
     }
 }

@@ -241,7 +241,7 @@ public class CoreQueryManager implements QueryManager {
                 return async.collect(futures,
                     QueryResult.collectParts(QUERY, range, combiner, limit,
                                          request,
-                                         q.getRequestMetadata().orElse(QueryRequestMetadata.of()),
+                                         q.getRequestMetadata().orElse(QueryOriginContext.of()),
                                          logQueries, logQueriesThresholdDataPoints));
             });
         }
