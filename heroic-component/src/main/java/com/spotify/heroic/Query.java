@@ -38,5 +38,5 @@ public class Query {
     private final Optional<QueryOptions> options;
     /* set of experimental features to enable */
     private final Optional<FeatureSet> features;
-    private final Optional<QueryRequestMetadata> requestMetadata;
+    private final Optional<QueryOriginContext> originContext;
 }

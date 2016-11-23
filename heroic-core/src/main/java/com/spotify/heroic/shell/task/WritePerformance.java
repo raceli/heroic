@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.spotify.heroic.QueryOptions;
+import com.spotify.heroic.QueryOriginContext;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.dagger.CoreComponent;
@@ -101,7 +102,8 @@ public class WritePerformance implements ShellTask {
 
         for (final Series s : series) {
             reads.add(readGroup
-                .fetch(new FetchData.Request(MetricType.POINT, s, range, QueryOptions.defaults()))
+                .fetch(new FetchData.Request(MetricType.POINT, s, range, QueryOptions.defaults(),
+                                             QueryOriginContext.of()))
                 .directTransform(result -> {
                     final ImmutableList.Builder<WriteMetric.Request> writes =
                         ImmutableList.builder();

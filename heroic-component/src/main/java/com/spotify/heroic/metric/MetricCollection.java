@@ -27,7 +27,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
 import com.spotify.heroic.ObjectLifecycleMonitor;
 import com.spotify.heroic.ObjectLifecycleMonitorProvider;
-import com.spotify.heroic.QueryRequestMetadata;
+import com.spotify.heroic.QueryOriginContext;
 import com.spotify.heroic.aggregation.AggregationSession;
 import com.spotify.heroic.common.Series;
 import java.lang.instrument.Instrumentation;
@@ -83,6 +83,7 @@ public abstract class MetricCollection {
     final MetricType type;
     final List<? extends Metric> data;
     static boolean fallbackToManualByteCounts = false;
+    QueryOriginContext originContext;
 
     public MetricCollection(final MetricType type, final List<? extends Metric> data) {
         this.type = type;
@@ -177,7 +178,7 @@ public abstract class MetricCollection {
     }
 
     public static MetricCollection build(
-        final QueryRequestMetadata originMetadata, final MetricType key, final List<? extends Metric> metrics
+        final QueryOriginContext originMetadata, final MetricType key, final List<? extends Metric> metrics
     ) {
         final Function<List<? extends Metric>, MetricCollection> adapter =
             checkNotNull(adapters.get(key), "adapter does not exist for type");
@@ -185,7 +186,7 @@ public abstract class MetricCollection {
     }
 
     public static MetricCollection mergeSorted(
-        final QueryRequestMetadata originMetadata, final MetricType type, final List<List<? extends Metric>> values
+        final QueryOriginContext originMetadata, final MetricType type, final List<List<? extends Metric>> values
     ) {
         final List<Metric> data = ImmutableList.copyOf(Iterators.mergeSorted(
             ImmutableList.copyOf(values.stream().map(Iterable::iterator).iterator()),

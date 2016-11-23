@@ -28,7 +28,7 @@ import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.protobuf.ByteString;
-import com.spotify.heroic.QueryRequestMetadata;
+import com.spotify.heroic.QueryOriginContext;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.RequestTimer;
@@ -222,12 +222,14 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
 
             switch (type) {
                 case POINT:
-                    return fetchBatch(watcher, type, POINTS, prepared, c, (t, d) -> {
+                    return fetchBatch(watcher, request.getOriginContext(), type, POINTS, prepared,
+                                      c, (t, d) -> {
                         final double value = deserializeValue(d);
                         return new Point(t, value);
                     });
                 case EVENT:
-                    return fetchBatch(watcher, type, EVENTS, prepared, c, (t, d) -> {
+                    return fetchBatch(watcher, request.getOriginContext(), type, EVENTS, prepared,
+                                      c, (t, d) -> {
                         final Map<String, String> payload;
 
                         try {
@@ -372,7 +374,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
     }
 
     private <T extends Metric> AsyncFuture<FetchData> fetchBatch(
-        final FetchQuotaWatcher watcher, final QueryRequestMetadata originMetadata,
+        final FetchQuotaWatcher watcher, final QueryOriginContext originContext,
         final MetricType type, final String columnFamily,
         final List<PreparedQuery> prepared, final BigtableConnection c,
         final BiFunction<Long, ByteString, T> deserializer
@@ -415,7 +417,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
                 final List<T> data =
                     ImmutableList.copyOf(Iterables.mergeSorted(points, Metric.comparator()));
                 final List<MetricCollection> groups =
-                    ImmutableList.of(MetricCollection.build(type, data));
+                    ImmutableList.of(MetricCollection.build(originContext, type, data));
 
                 return FetchData.of(trace, times, groups);
             }));

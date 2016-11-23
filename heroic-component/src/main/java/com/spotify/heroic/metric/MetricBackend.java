@@ -22,7 +22,6 @@
 package com.spotify.heroic.metric;
 
 import com.spotify.heroic.QueryOptions;
-import com.spotify.heroic.QueryRequestMetadata;
 import com.spotify.heroic.async.AsyncObservable;
 import com.spotify.heroic.common.Collected;
 import com.spotify.heroic.common.Grouped;

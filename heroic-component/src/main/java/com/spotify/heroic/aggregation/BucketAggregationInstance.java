@@ -202,7 +202,8 @@ public abstract class BucketAggregationInstance<B extends Bucket> implements Agg
             }
 
             final Set<Series> series = ImmutableSet.copyOf(Iterables.concat(this.series));
-            final MetricCollection metrics = MetricCollection.build(out, result);
+            // FIXME: fix real QueryOriginContext
+            final MetricCollection metrics = MetricCollection.build(null, out, result);
 
             final Statistics statistics =
                 new Statistics(ImmutableMap.of(AggregationInstance.SAMPLE_SIZE, sampleSize.sum()));

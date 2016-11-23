@@ -24,7 +24,7 @@ package com.spotify.heroic.metric;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Ordering;
 import com.spotify.heroic.QueryOptions;
-import com.spotify.heroic.QueryRequestMetadata;
+import com.spotify.heroic.QueryOriginContext;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
 import eu.toolchain.async.Collector;
@@ -62,12 +62,16 @@ public class FetchData {
             final ImmutableList.Builder<Long> times = ImmutableList.builder();
             final Map<MetricType, ImmutableList.Builder<Metric>> fetchGroups = new HashMap<>();
             final ImmutableList.Builder<QueryTrace> traces = ImmutableList.builder();
+            QueryOriginContext originContext = null;
 
             for (final FetchData fetch : results) {
                 times.addAll(fetch.times);
                 traces.add(fetch.trace);
 
                 for (final MetricCollection g : fetch.groups) {
+                    if (originContext == null) {
+                        originContext = g.getOriginContext();
+                    }
                     ImmutableList.Builder<Metric> data = fetchGroups.get(g.getType());
 
                     if (data == null) {
@@ -79,10 +83,12 @@ public class FetchData {
                 }
             }
 
+            final QueryOriginContext finalOriginContext = originContext;
+
             final List<MetricCollection> groups = fetchGroups
                 .entrySet()
                 .stream()
-                .map((e) -> MetricCollection.build(e.getKey(),
+                .map((e) -> MetricCollection.build(finalOriginContext, e.getKey(),
                     Ordering.from(Metric.comparator()).immutableSortedCopy(e.getValue().build())))
                 .collect(Collectors.toList());
 
@@ -96,6 +102,6 @@ public class FetchData {
         private final Series series;
         private final DateRange range;
         private final QueryOptions options;
-        private final QueryRequestMetadata originMetadata;
+        private final QueryOriginContext originContext;
     }
 }

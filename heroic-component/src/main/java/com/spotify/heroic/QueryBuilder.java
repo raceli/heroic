@@ -50,7 +50,7 @@ public class QueryBuilder {
     private Optional<Aggregation> aggregation = Optional.empty();
     private Optional<QueryOptions> options = Optional.empty();
     private Optional<FeatureSet> features = Optional.empty();
-    private Optional<QueryRequestMetadata> queryRequestMetadata = Optional.empty();
+    private Optional<QueryOriginContext> queryRequestMetadata = Optional.empty();
 
     /**
      * Specify a set of tags that has to match.
@@ -148,7 +148,7 @@ public class QueryBuilder {
         return this;
     }
 
-    public QueryBuilder queryRequestMetadata(final Optional<QueryRequestMetadata> m) {
+    public QueryBuilder queryRequestMetadata(final Optional<QueryOriginContext> m) {
         checkNotNull(m, "queryRequestMetadata");
         this.queryRequestMetadata = m;
         return this;

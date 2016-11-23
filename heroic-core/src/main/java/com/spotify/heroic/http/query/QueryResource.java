@@ -24,7 +24,6 @@ package com.spotify.heroic.http.query;
 import com.google.common.collect.ImmutableMap;
 import com.spotify.heroic.Query;
 import com.spotify.heroic.QueryManager;
-import com.spotify.heroic.http.query.CoreQueryRequestMetadataFactory;
 import com.spotify.heroic.common.JavaxRestFramework;
 import com.spotify.heroic.metric.QueryResult;
 import eu.toolchain.async.AsyncFramework;
@@ -73,7 +72,7 @@ public class QueryResource {
         @Context HttpServletRequest servletReq, String query
     ) {
         final Query q = this.query.newQueryFromString(query)
-            .queryRequestMetadata(Optional.of(CoreQueryRequestMetadataFactory.create(servletReq)))
+            .queryRequestMetadata(Optional.of(CoreQueryOriginContextFactory.create(servletReq)))
             .build();
 
 
@@ -91,7 +90,7 @@ public class QueryResource {
         @Context HttpServletRequest servletReq, QueryMetrics query
     ) {
         final Query q = query.toQueryBuilder(this.query::newQueryFromString)
-            .queryRequestMetadata(Optional.of(CoreQueryRequestMetadataFactory.create(servletReq)))
+            .queryRequestMetadata(Optional.of(CoreQueryOriginContextFactory.create(servletReq)))
             .build();
 
         final QueryManager.Group g = this.query.useOptionalGroup(Optional.ofNullable(group));
@@ -116,7 +115,7 @@ public class QueryResource {
                     .getValue()
                     .toQueryBuilder(this.query::newQueryFromString)
                     .rangeIfAbsent(query.getRange())
-                    .queryRequestMetadata(Optional.of(CoreQueryRequestMetadataFactory.create(
+                    .queryRequestMetadata(Optional.of(CoreQueryOriginContextFactory.create(
                         servletReq)))
                     .build();
 

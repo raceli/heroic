@@ -21,6 +21,7 @@
 
 package com.spotify.heroic.metric;
 
+import com.spotify.heroic.QueryOriginContext;
 import com.spotify.heroic.common.Series;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;

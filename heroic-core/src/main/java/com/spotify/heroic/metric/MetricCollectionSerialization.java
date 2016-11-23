@@ -100,7 +100,8 @@ public class MetricCollectionSerialization {
                 throw c.wrongTokenException(p, JsonToken.END_OBJECT, null);
             }
 
-            return MetricCollection.build(type, d.build());
+            // FIXME: fix real QueryOriginContext?
+            return MetricCollection.build(null, type, d.build());
         }
     }
 

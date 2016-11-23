@@ -23,6 +23,7 @@ package com.spotify.heroic.shell.task;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.spotify.heroic.QueryOptions;
+import com.spotify.heroic.QueryOriginContext;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.dagger.CoreComponent;
@@ -98,7 +99,7 @@ public class Fetch implements ShellTask {
         final QueryOptions options = QueryOptions.builder().tracing(params.tracing).build();
 
         return readGroup
-            .fetch(new FetchData.Request(source, series, range, options))
+            .fetch(new FetchData.Request(source, series, range, options, QueryOriginContext.of()))
             .lazyTransform(result -> {
                 outer:
                 for (final MetricCollection g : result.getGroups()) {
