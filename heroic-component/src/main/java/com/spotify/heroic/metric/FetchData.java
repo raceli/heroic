@@ -24,6 +24,7 @@ package com.spotify.heroic.metric;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Ordering;
 import com.spotify.heroic.QueryOptions;
+import com.spotify.heroic.QueryRequestMetadata;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
 import eu.toolchain.async.Collector;
@@ -95,5 +96,6 @@ public class FetchData {
         private final Series series;
         private final DateRange range;
         private final QueryOptions options;
+        private final QueryRequestMetadata originMetadata;
     }
 }

@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
 import com.spotify.heroic.ObjectLifecycleMonitor;
 import com.spotify.heroic.ObjectLifecycleMonitorProvider;
+import com.spotify.heroic.QueryRequestMetadata;
 import com.spotify.heroic.aggregation.AggregationSession;
 import com.spotify.heroic.common.Series;
 import java.lang.instrument.Instrumentation;
@@ -176,7 +177,7 @@ public abstract class MetricCollection {
     }
 
     public static MetricCollection build(
-        final MetricType key, final List<? extends Metric> metrics
+        final QueryRequestMetadata originMetadata, final MetricType key, final List<? extends Metric> metrics
     ) {
         final Function<List<? extends Metric>, MetricCollection> adapter =
             checkNotNull(adapters.get(key), "adapter does not exist for type");
@@ -184,12 +185,12 @@ public abstract class MetricCollection {
     }
 
     public static MetricCollection mergeSorted(
-        final MetricType type, final List<List<? extends Metric>> values
+        final QueryRequestMetadata originMetadata, final MetricType type, final List<List<? extends Metric>> values
     ) {
         final List<Metric> data = ImmutableList.copyOf(Iterators.mergeSorted(
             ImmutableList.copyOf(values.stream().map(Iterable::iterator).iterator()),
             Metric.comparator()));
-        return build(type, data);
+        return build(originMetadata, type, data);
     }
 
     @SuppressWarnings("unchecked")

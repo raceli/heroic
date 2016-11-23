@@ -223,8 +223,12 @@ public class CoreQueryManager implements QueryManager {
                 combiner = AggregationCombiner.DEFAULT;
             }
 
+            QueryRequestMetadata originMetadata =
+                q.getRequestMetadata().orElse(QueryRequestMetadata.of();
+
             final FullQuery.Request request =
-                new FullQuery.Request(source, filter, range, aggregationInstance, options);
+                new FullQuery.Request(source, filter, range, aggregationInstance, options,
+                                      originMetadata);
 
             return queryCache.load(request, () -> {
                 for (final ClusterShard shard : shards) {
@@ -241,7 +245,7 @@ public class CoreQueryManager implements QueryManager {
                 return async.collect(futures,
                     QueryResult.collectParts(QUERY, range, combiner, limit,
                                          request,
-                                         q.getRequestMetadata().orElse(QueryRequestMetadata.of()),
+                                         originMetadata,
                                          logQueries, logQueriesThresholdDataPoints));
             });
         }

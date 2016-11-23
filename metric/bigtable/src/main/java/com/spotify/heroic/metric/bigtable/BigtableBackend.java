@@ -28,6 +28,7 @@ import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.protobuf.ByteString;
+import com.spotify.heroic.QueryRequestMetadata;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.RequestTimer;
@@ -371,7 +372,8 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
     }
 
     private <T extends Metric> AsyncFuture<FetchData> fetchBatch(
-        final FetchQuotaWatcher watcher, final MetricType type, final String columnFamily,
+        final FetchQuotaWatcher watcher, final QueryRequestMetadata originMetadata,
+        final MetricType type, final String columnFamily,
         final List<PreparedQuery> prepared, final BigtableConnection c,
         final BiFunction<Long, ByteString, T> deserializer
     ) {

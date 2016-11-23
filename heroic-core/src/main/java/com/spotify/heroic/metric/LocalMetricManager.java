@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.spotify.heroic.QueryOptions;
+import com.spotify.heroic.QueryRequestMetadata;
 import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.aggregation.AggregationOutput;
 import com.spotify.heroic.aggregation.AggregationResult;
@@ -212,7 +213,8 @@ public class LocalMetricManager implements MetricManager {
                 accept(b -> {
                     for (final Series s : result.getSeries()) {
                         fetches.add(() -> b
-                            .fetch(new FetchData.Request(source, s, range, options), watcher)
+                            .fetch(new FetchData.Request(source, s, range, options,
+                                                         request.getOriginMetadata()), watcher)
                             .directTransform(d -> Pair.of(s, d)));
                     }
                 });
@@ -350,7 +352,8 @@ public class LocalMetricManager implements MetricManager {
         }
 
         @Override
-        public AsyncFuture<MetricCollection> fetchRow(final BackendKey key) {
+        public AsyncFuture<MetricCollection> fetchRow(final QueryRequestMetadata originMetadata,
+                                                      final BackendKey key) {
             final List<AsyncFuture<MetricCollection>> callbacks = map(b -> b.fetchRow(key));
 
             return async.collect(callbacks, results -> {
@@ -360,7 +363,7 @@ public class LocalMetricManager implements MetricManager {
                     collections.add(result.getData());
                 }
 
-                return MetricCollection.mergeSorted(key.getType(), collections);
+                return MetricCollection.mergeSorted(originMetadata, key.getType(), collections);
             });
         }
 
