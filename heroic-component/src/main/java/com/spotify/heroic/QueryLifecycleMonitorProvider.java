@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Spotify AB.
+ * Copyright (c) 2016 Spotify AB.
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,23 +19,16 @@
  * under the License.
  */
 
-package com.spotify.heroic.metric;
+package com.spotify.heroic;
 
-import com.google.common.collect.ImmutableList;
-import com.spotify.heroic.aggregation.AggregationSession;
-import com.spotify.heroic.common.Series;
+import lombok.Data;
 
-import java.util.Map;
-import java.util.Set;
+@Data
+public class QueryLifecycleMonitorProvider {
+    private static final QueryLifecycleMonitor queryLifecycleMonitor =
+        new QueryLifecycleMonitor();
 
-public class EmptyMetricCollection extends MetricCollection {
-    public EmptyMetricCollection() {
-        super(MetricType.POINT, ImmutableList.of(), null);
-    }
-
-    @Override
-    public void updateAggregation(
-        AggregationSession session, Map<String, String> tags, Set<Series> series
-    ) {
+    public static QueryLifecycleMonitor get() {
+        return queryLifecycleMonitor;
     }
 }

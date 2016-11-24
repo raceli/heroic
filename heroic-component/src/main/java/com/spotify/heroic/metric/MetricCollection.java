@@ -25,17 +25,12 @@ import com.spotify.heroic.HeroicInstrumentation;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
-import com.spotify.heroic.ObjectLifecycleMonitor;
-import com.spotify.heroic.ObjectLifecycleMonitorProvider;
+import com.spotify.heroic.QueryLifecycleMonitorProvider;
 import com.spotify.heroic.QueryOriginContext;
 import com.spotify.heroic.aggregation.AggregationSession;
 import com.spotify.heroic.common.Series;
-import java.lang.instrument.Instrumentation;
-import javax.inject.Inject;
 import javax.naming.ServiceUnavailableException;
-import lombok.AccessLevel;
 import lombok.Data;
-import lombok.RequiredArgsConstructor;
 
 import java.util.List;
 import java.util.Map;
@@ -83,11 +78,12 @@ public abstract class MetricCollection {
     final MetricType type;
     final List<? extends Metric> data;
     static boolean fallbackToManualByteCounts = false;
-    QueryOriginContext originContext;
+    final QueryOriginContext originContext;
 
-    public MetricCollection(final MetricType type, final List<? extends Metric> data) {
+    public MetricCollection(final MetricType type, final List<? extends Metric> data, QueryOriginContext originContext) {
         this.type = type;
         this.data = data;
+        this.originContext = originContext;
 
         long numBytes = 0;
         if (!fallbackToManualByteCounts) {
@@ -106,7 +102,7 @@ public abstract class MetricCollection {
             }
         }
 
-        ObjectLifecycleMonitorProvider.get().registerObject(this, "MetricCollection#" + type.identifier(), numBytes);
+        QueryLifecycleMonitorProvider.get().registerMetricCollection(this, "MetricCollection#" + type.identifier(), numBytes);
     }
 
     /**
@@ -146,6 +142,7 @@ public abstract class MetricCollection {
         return empty;
     }
 
+    /*
     // @formatter:off
     private static final
     Map<MetricType, Function<List<? extends Metric>, MetricCollection>> adapters = ImmutableMap.of(
@@ -156,48 +153,65 @@ public abstract class MetricCollection {
         MetricType.CARDINALITY, CardinalityCollection::new
     );
     // @formatter:on
+    */
 
     public static MetricCollection groups(List<MetricGroup> metrics) {
-        return new GroupCollection(metrics);
+        return new GroupCollection(metrics, null);
     }
 
     public static MetricCollection points(List<Point> metrics) {
-        return new PointCollection(metrics);
+        return new PointCollection(metrics, null);
     }
 
     public static MetricCollection events(List<Event> metrics) {
-        return new EventCollection(metrics);
+        return new EventCollection(metrics, null);
     }
 
     public static MetricCollection spreads(List<Spread> metrics) {
-        return new SpreadCollection(metrics);
+        return new SpreadCollection(metrics, null);
     }
 
     public static MetricCollection cardinality(List<Payload> metrics) {
-        return new CardinalityCollection(metrics);
+        return new CardinalityCollection(metrics, null);
     }
 
     public static MetricCollection build(
-        final QueryOriginContext originMetadata, final MetricType key, final List<? extends Metric> metrics
+        final QueryOriginContext originContext, final MetricType key, final List<? extends Metric> metrics
     ) {
-        final Function<List<? extends Metric>, MetricCollection> adapter =
-            checkNotNull(adapters.get(key), "adapter does not exist for type");
-        return adapter.apply(metrics);
+        //final Function<List<? extends Metric>, MetricCollection> adapter =
+        //    checkNotNull(adapters.get(key), "adapter does not exist for type");
+        //return adapter.apply(metrics, originContext);
+        if (key == MetricType.GROUP) {
+            return new GroupCollection(metrics, originContext);
+        }
+        if (key == MetricType.POINT) {
+            return new PointCollection(metrics, originContext);
+        }
+        if (key == MetricType.EVENT) {
+            return new EventCollection(metrics, originContext);
+        }
+        if (key == MetricType.SPREAD) {
+            return new SpreadCollection(metrics, originContext);
+        }
+        if (key == MetricType.CARDINALITY) {
+            return new CardinalityCollection(metrics, originContext);
+        }
+        throw new NullPointerException("adapter does not exist for type");
     }
 
     public static MetricCollection mergeSorted(
-        final QueryOriginContext originMetadata, final MetricType type, final List<List<? extends Metric>> values
+        final QueryOriginContext originContext, final MetricType type, final List<List<? extends Metric>> values
     ) {
         final List<Metric> data = ImmutableList.copyOf(Iterators.mergeSorted(
             ImmutableList.copyOf(values.stream().map(Iterable::iterator).iterator()),
             Metric.comparator()));
-        return build(originMetadata, type, data);
+        return build(originContext, type, data);
     }
 
     @SuppressWarnings("unchecked")
     private static class PointCollection extends MetricCollection {
-        PointCollection(List<? extends Metric> points) {
-            super(MetricType.POINT, points);
+        PointCollection(List<? extends Metric> points, QueryOriginContext originContext) {
+            super(MetricType.POINT, points, originContext);
         }
 
         @Override
@@ -214,8 +228,8 @@ public abstract class MetricCollection {
 
     @SuppressWarnings("unchecked")
     private static class EventCollection extends MetricCollection {
-        EventCollection(List<? extends Metric> events) {
-            super(MetricType.EVENT, events);
+        EventCollection(List<? extends Metric> events, QueryOriginContext originContext) {
+            super(MetricType.EVENT, events, originContext);
         }
 
         @Override
@@ -232,8 +246,8 @@ public abstract class MetricCollection {
 
     @SuppressWarnings("unchecked")
     private static class SpreadCollection extends MetricCollection {
-        SpreadCollection(List<? extends Metric> spread) {
-            super(MetricType.SPREAD, spread);
+        SpreadCollection(List<? extends Metric> spread, QueryOriginContext originContext) {
+            super(MetricType.SPREAD, spread, originContext);
         }
 
         @Override
@@ -250,8 +264,8 @@ public abstract class MetricCollection {
 
     @SuppressWarnings("unchecked")
     private static class GroupCollection extends MetricCollection {
-        GroupCollection(List<? extends Metric> groups) {
-            super(MetricType.GROUP, groups);
+        GroupCollection(List<? extends Metric> groups, QueryOriginContext originContext) {
+            super(MetricType.GROUP, groups, originContext);
         }
 
         @Override
@@ -268,8 +282,8 @@ public abstract class MetricCollection {
 
     @SuppressWarnings("unchecked")
     private static class CardinalityCollection extends MetricCollection {
-        CardinalityCollection(List<? extends Metric> cardinality) {
-            super(MetricType.CARDINALITY, cardinality);
+        CardinalityCollection(List<? extends Metric> cardinality, QueryOriginContext originContext) {
+            super(MetricType.CARDINALITY, cardinality, originContext);
         }
 
         @Override

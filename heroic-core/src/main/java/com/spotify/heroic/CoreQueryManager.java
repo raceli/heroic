@@ -229,6 +229,8 @@ public class CoreQueryManager implements QueryManager {
                 new FullQuery.Request(source, filter, range, aggregationInstance, options,
                                       originContext);
 
+            QueryLifecycleMonitorProvider.get().registerFullQueryRequest(request);
+
             return queryCache.load(request, () -> {
                 for (final ClusterShard shard : shards) {
                     final AsyncFuture<QueryResultPart> queryPart = shard
