@@ -134,19 +134,24 @@ public class QueryLifecycleMonitor extends Thread {
         long logInterval = 10000;
 
         while (pleaseStop.getCount() == 1) {
-            if (lastLogTime + logInterval < System.currentTimeMillis()) {
-                periodicLogDump();
-                lastLogTime = System.currentTimeMillis();
-            }
-
             int processed = 0;
             processed += checkMetricCollectionDeadReferences();
             processed += checkFullQueryRequestDeadReferences();
 
+            if ((processed == 0 && (lastLogTime + logInterval < System.currentTimeMillis()))
+                || (lastLogTime + logInterval*2 < System.currentTimeMillis())) {
+                /*
+                 * Only log when we don't have queued up dead references to take care of
+                 * OR, if we haven't logged in a long while - we don't want to miss logging info
+                 */
+                periodicLogDump();
+                lastLogTime = System.currentTimeMillis();
+            }
+
             if (processed == 0) {
                 // Avoid busy looping when there's no work
                 try {
-                    Thread.sleep(100);
+                    Thread.sleep(10);
                 } catch (InterruptedException e) {
                 }
             }
@@ -177,19 +182,19 @@ public class QueryLifecycleMonitor extends Thread {
                 WeakReference<MetricCollection> weakReference = (WeakReference<MetricCollection>)o;
                 MetricCollection metricCollection = weakReference.get();
                 if (metricCollection == null) {
-                    log.info("periodicLogDump() metricCollection was null");
+                    //log.info("periodicLogDump() metricCollection was null");
                     continue;
                 }
                 ObjectMetadata objectMetadata = metricCollectionRegistry.get(weakReference);
                 if (objectMetadata == null) {
-                    log.info("periodicLogDump() objectMetadata was null");
+                    //log.info("periodicLogDump() objectMetadata was null");
                     continue;
                 }
 
                 // Summarize statistics for all queries being referenced by MetricCollection objects
                 QueryOriginContext originContext = metricCollection.getOriginContext();
                 if (originContext == null) {
-                    log.info("periodicLogDump() originContext was null");
+                    //log.info("periodicLogDump() originContext was null");
                     continue;
                 }
                 QueryMetadata queryMetadata = queries.get(originContext.getQueryId());
@@ -217,12 +222,12 @@ public class QueryLifecycleMonitor extends Thread {
                     long val1 = queries.get(o1).getNumBytes();
                     long val2 = queries.get(o2).getNumBytes();
                     if (val1 < val2) {
-                        return -1;
+                        return 1;
                     }
                     if (val1 == val2) {
                         return 0;
                     }
-                    return 1;
+                    return -1;
                 });
                 int maxQueriesToLog = 5;
                 int index = 0;
