@@ -74,6 +74,15 @@ public final class CoreJavaxRestFramework implements JavaxRestFramework {
             @Override
             public void cancelled() throws Exception {
                 log.error("Request cancelled");
+
+                StackTraceElement[] stackTraceElements = Thread.currentThread().getStackTrace();
+                int i=0;
+                log.info("Stack trace:");
+                while (i<stackTraceElements.length) {
+                    log.info(" " + stackTraceElements[i].toString());
+                    i++;
+                }
+
                 response.resume(Response
                     .status(Response.Status.INTERNAL_SERVER_ERROR)
                     .entity(new InternalErrorMessage("request cancelled",

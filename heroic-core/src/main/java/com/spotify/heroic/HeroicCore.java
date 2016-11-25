@@ -34,6 +34,7 @@ import com.spotify.heroic.cache.CacheComponent;
 import com.spotify.heroic.cluster.CoreClusterComponent;
 import com.spotify.heroic.cluster.DaggerCoreClusterComponent;
 import com.spotify.heroic.common.Duration;
+import com.spotify.heroic.common.MonitoringThreadPoolExecutor;
 import com.spotify.heroic.common.Optionals;
 import com.spotify.heroic.consumer.ConsumersComponent;
 import com.spotify.heroic.consumer.CoreConsumersModule;
@@ -311,7 +312,7 @@ public class HeroicCore implements HeroicConfiguration {
      * @return
      */
     private ExecutorService setupExecutor(final int threads) {
-        return new ThreadPoolExecutor(threads, threads, 0L, TimeUnit.MILLISECONDS,
+        return new MonitoringThreadPoolExecutor(threads, threads, 0L, TimeUnit.MILLISECONDS,
             new LinkedBlockingQueue<>(), new ThreadFactoryBuilder()
             .setNameFormat("heroic-core-%d")
             .setUncaughtExceptionHandler(uncaughtExceptionHandler)
@@ -346,6 +347,7 @@ public class HeroicCore implements HeroicConfiguration {
                 }
             }
         };
+
     }
 
     /**

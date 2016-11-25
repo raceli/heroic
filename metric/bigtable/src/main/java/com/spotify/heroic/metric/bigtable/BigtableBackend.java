@@ -67,6 +67,8 @@ import eu.toolchain.async.RetryResult;
 import eu.toolchain.serializer.BytesSerialWriter;
 import eu.toolchain.serializer.Serializer;
 import eu.toolchain.serializer.SerializerFramework;
+import java.util.Random;
+import java.util.concurrent.atomic.AtomicLong;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
@@ -373,6 +375,10 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
             .directTransform(result -> timer.end());
     }
 
+
+    static AtomicLong numberOfConcurrentFetches = new AtomicLong(0);
+    static AtomicLong totNumRequests = new AtomicLong(0);
+
     private <T extends Metric> AsyncFuture<FetchData> fetchBatch(
         final FetchQuotaWatcher watcher, final QueryOriginContext originContext,
         final MetricType type, final String columnFamily,
@@ -382,6 +388,13 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
         final BigtableDataClient client = c.dataClient();
 
         final List<AsyncFuture<FetchData>> fetches = new ArrayList<>(prepared.size());
+
+        long currNumRequests = totNumRequests.incrementAndGet();
+        long currNum = numberOfConcurrentFetches.addAndGet(prepared.size());
+        if ((currNumRequests % 100) == 0) {
+            log.info("fetchBatch() currentBalanceReq-Resp:" + currNum + " totalNumRequests:"
+                     + currNumRequests);
+        }
 
         for (final PreparedQuery p : prepared) {
             final AsyncFuture<List<Row>> readRows = client.readRows(table, ReadRowsRequest
@@ -403,6 +416,8 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
 
             fetches.add(readRows.directTransform(result -> {
                 watcher.readData(result.size());
+
+                numberOfConcurrentFetches.addAndGet( -result.size() );
 
                 final List<Iterable<T>> points = new ArrayList<>();
 
