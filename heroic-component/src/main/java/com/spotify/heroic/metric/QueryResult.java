@@ -134,7 +134,7 @@ public class QueryResult {
                              final boolean logQueries,
                              final OptionalLimit logQueriesThresholdDataPoints
     ) {
-        log.info("QueryResult:logQueryInfo entering");
+        log.info("QueryResult:logQueryInfo entering. threadId:" + Thread.currentThread().getId());
         if (!logQueries) {
             log.info("QueryResult:logQueryInfo won't log queries");
             return;
