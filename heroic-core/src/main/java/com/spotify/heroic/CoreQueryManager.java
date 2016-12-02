@@ -248,10 +248,6 @@ public class CoreQueryManager implements QueryManager {
                         queryLogger.logQueryResolved(q, _queryResult);
                         return _queryResult;
                     });
-                    /*
-                     * FIXME: Is this a suitable place to do catchFailed and catchCancelled to log
-                     * those? Return an empty QueryResult? Or is that handled somewhere else?
-                     */
                 }
 
                 return queryResult;
