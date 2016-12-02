@@ -21,19 +21,28 @@
 
 package com.spotify.heroic;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonRawValue;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.metric.QueryResult;
 import com.spotify.heroic.metric.QueryTrace;
 import com.spotify.heroic.metric.ShardedResultGroup;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.TimeZone;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
 import javax.inject.Inject;
 import javax.inject.Named;
+import javax.ws.rs.core.MediaType;
+
+import lombok.AllArgsConstructor;
 import lombok.Data;
 
 import java.util.List;
@@ -48,6 +57,7 @@ public class CoreQueryLogger implements QueryLogger {
     private static Logger queryDoneLog = LoggerFactory.getLogger("query.done.log");
 
     private OptionalLimit logQueriesThresholdDataPoints;
+    private ObjectMapper objectMapper;
 
     private static LongAdder totalQueriesProcessed = new LongAdder();
 
@@ -56,8 +66,10 @@ public class CoreQueryLogger implements QueryLogger {
 
     @Inject
     public CoreQueryLogger(@Named ("logQueriesThresholdDataPoints") final OptionalLimit
-        logQueriesThresholdDataPoints) {
+        logQueriesThresholdDataPoints,
+        @Named(MediaType.APPLICATION_JSON) final ObjectMapper objectMapper) {
         this.logQueriesThresholdDataPoints = logQueriesThresholdDataPoints;
+        this.objectMapper = objectMapper;
     }
 
     public void logQueryAccess(Query query) {
@@ -71,28 +83,36 @@ public class CoreQueryLogger implements QueryLogger {
             idString = "";
         }
 
+        // Format timestamp nicely
         TimeZone tz = TimeZone.getTimeZone("UTC");
         DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm'Z'");
         dateFormat.setTimeZone(tz);
         String currentTimeAsISO = dateFormat.format(new Date());
 
         boolean isIPv6 = originContext.getRemoteAddr().indexOf(':') != -1;
-        String json = "{" +
-            " \"@timestamp\": \"" + currentTimeAsISO + "\"," +
-            " \"@message\": {" +
-            " \"UUID\": \"" + originContext.getQueryId() + "\"," +
-            " \"fromIP\": \"" +
+
+        QueryAccessDataMessage message = new QueryAccessDataMessage(
+            originContext.getQueryId(),
             (isIPv6 ? "[" : "") + originContext.getRemoteAddr() + (isIPv6 ? "]" : "") +
-            ":" + originContext.getRemotePort() + "\"" + "," +
-            " \"fromHost\": \"" + originContext.getRemoteHost() + "\"," +
-            " \"user-agent\": \"" + originContext.getRemoteUserAgent() + "\"," +
-            " \"client-id\": \"" + originContext.getRemoteClientId() + "\"," +
-            " \"query\": " + originContext.getQueryString() +
-            "}" +
-            "}";
+                ":" + originContext.getRemotePort(),
+            originContext.getRemoteHost(),
+            originContext.getRemoteUserAgent(),
+            originContext.getRemoteClientId(),
+            originContext.getQueryString());
+
+        QueryAccessData queryAccessData = new QueryAccessData(currentTimeAsISO, message);
+
+        String json;
+        try {
+            json = objectMapper.writeValueAsString(queryAccessData);
+        } catch (JsonProcessingException e) {
+            log.info("Failed to generate JSON for logging of query");
+            return;
+        }
 
         queryAccessLog.trace(json);
     }
+
 
     public void logQueryFailed(Query query, Throwable t) {
         logQueryDone(query, null, "failed", t);
@@ -126,67 +146,136 @@ public class CoreQueryLogger implements QueryLogger {
 
         long currQueriesAboveThreshold = queriesAboveThreshold.incrementAndGet();
 
+        // Format timestamp nicely
         TimeZone tz = TimeZone.getTimeZone("UTC");
         DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm'Z'");
         dateFormat.setTimeZone(tz);
         String currentTimeAsISO = dateFormat.format(new Date());
 
         boolean isIPv6 = originContext.getRemoteAddr().indexOf(':') != -1;
+
         long postAggregationDataPointsPerS = 0;
         if (trace.getElapsed() != 0) {
             postAggregationDataPointsPerS =
                 (1000000 * postAggregationDataPoints) / trace.getElapsed();
         }
-        String json = "{" +
-            " \"@timestamp\": \"" + currentTimeAsISO + "\"," +
-            " \"status\": \"" + status + "\"," +
-            (throwable == null ? "" : " \"error\": \"" + throwable.toString() + "\"") +
-            " \"@message\": {" +
-            " \"UUID\": \"" + originContext.getQueryId() + "\"," +
-            " \"numQueriesAboveThreshold\": " + currQueriesAboveThreshold + "," +
-            " \"totalQueries\": " + totalQueriesProcessed + "," +
-            " \"postAggregationDataPoints\": " + postAggregationDataPoints + "," +
-            " \"elapsed\": " + trace.getElapsed() + "," +
-            " \"postAggregationDataPoints/s\": " + postAggregationDataPointsPerS + "," +
-            " \"preAggregationSampleSize\": " + trace.getPreAggregationSampleSize() + "," +
-            " \"numSeries\": " + trace.getNumSeries() + "," +
-            " \"trace-what\": \"" + trace.getWhat().toString() + "\"," +
-            " \"fromIP\": \"" +
+
+        QueryDoneMessageData message = new QueryDoneMessageData(
+            status,
+            (throwable == null ? null : throwable.toString()),
+            originContext.getQueryId(),
+            totalQueriesProcessed.longValue(),
+            currQueriesAboveThreshold,
+            postAggregationDataPoints,
+            trace.getElapsed(),
+            postAggregationDataPointsPerS,
+            trace.getPreAggregationSampleSize(),
+            trace.getNumSeries(),
             (isIPv6 ? "[" : "") + originContext.getRemoteAddr() + (isIPv6 ? "]" : "") +
-            ":" + originContext.getRemotePort() + "\"" + "," +
-            " \"fromHost\": \"" + originContext.getRemoteHost() + "\"," +
-            " \"user-agent\": \"" + originContext.getRemoteUserAgent() + "\"," +
-            " \"client-id\": \"" + originContext.getRemoteClientId() + "\"," +
-            " \"query\": " + originContext.getQueryString() + "," +
-            " \"children\": [";
+                ":" + originContext.getRemotePort(),
+            originContext.getRemoteHost(),
+            originContext.getRemoteUserAgent(),
+            originContext.getRemoteClientId(),
+            originContext.getQueryString(),
+            createQueryDoneChildList(trace.getChildren()));
 
-        json += jsonForQueryTraceChildren(trace.getChildren());
+        QueryDoneData queryDoneData = new QueryDoneData(currentTimeAsISO, message);
 
-        json += "]";
-        json += "}";
-        json += "}";
+        String json;
+        try {
+            json = objectMapper.writeValueAsString(queryDoneData);
+        } catch (JsonProcessingException e) {
+            log.info("Failed to generate JSON for logging of query");
+            return;
+        }
 
         queryDoneLog.trace(json);
     }
 
-    public String jsonForQueryTraceChildren(final List<QueryTrace> children) {
 
-        String out = new String();
-        Iterator<QueryTrace> iterator = children.iterator();
-        while (iterator.hasNext()) {
-            QueryTrace child = iterator.next();
-            out += "{" +
-                " \"what\": \"" + child.getWhat().toString() + "\"," +
-                " \"elapsed\": " + child.getElapsed() + "," +
-                " \"preAggregationSampleSize\": " + child.getPreAggregationSampleSize() +
-                "," +
-                " \"numSeries\": " + child.getNumSeries() + "," +
-                " \"children\": [";
-            out += jsonForQueryTraceChildren(child.getChildren());
-            out += "]";
-            out += "}";
-            out += (iterator.hasNext() ? ", " : "");
-        }
-        return out;
+    @AllArgsConstructor
+    @Data
+    class QueryAccessData {
+        @JsonProperty("@timestamp")
+        private String timestamp;
+        @JsonProperty("@message")
+        private QueryAccessDataMessage message;
     }
+    @AllArgsConstructor
+    @Data
+    class QueryAccessDataMessage {
+        private UUID uuid;
+        private String fromIP;
+        private String fromHost;
+        private String userAgent;
+        private String clientId;
+        // The query String already contains the original JSON, so tell Jackson to not escape it
+        @JsonRawValue
+        private String query;
+    }
+
+
+    @AllArgsConstructor
+    @Data
+    class QueryDoneData {
+        @JsonProperty("@timestamp")
+        String timestamp;
+        @JsonProperty("@message")
+        QueryDoneMessageData message;
+    }
+
+    @AllArgsConstructor
+    @Data
+    class QueryDoneMessageData {
+        String status;
+        String error;
+        UUID uuid;
+        long totalQueries;
+        long numQueriesAboveThreshold;
+        long postAggregationDataPoints;
+        long elapsed;
+        long postAggregationDataPointsPerS;
+        long preAggregationDataPoints;
+        long preAggregationSeries;
+        String fromIP;
+        String fromHost;
+        private String userAgent;
+        private String clientId;
+        // The query String already contains the original JSON, so tell Jackson to not escape it
+        @JsonRawValue
+        private String query;
+        List<QueryDoneChildData> queryTraceChildren;
+    }
+
+    @AllArgsConstructor
+    @Data
+    class QueryDoneChildData {
+        private String traceLevel;
+        private long elapsed;
+        private long preAggregationDataPoints;
+        private long preAggregationSeries;
+        List<QueryDoneChildData> queryTraceChildren;
+    }
+
+    private List<QueryDoneChildData> createQueryDoneChildList(List<QueryTrace> queryTraces) {
+        List<QueryDoneChildData> list = new ArrayList<>();
+        Iterator<QueryTrace> iterator = queryTraces.iterator();
+
+        while (iterator.hasNext()) {
+            QueryTrace queryTrace = iterator.next();
+            list.add(createQueryDoneChild(queryTrace));
+        }
+        return list;
+    }
+
+    private QueryDoneChildData createQueryDoneChild(QueryTrace queryTrace) {
+        List<QueryDoneChildData> children = createQueryDoneChildList(queryTrace.getChildren());
+
+        QueryDoneChildData child = new QueryDoneChildData(queryTrace.getWhat().toString(),
+            queryTrace.getElapsed(), queryTrace.getPreAggregationSampleSize(),
+            queryTrace.getNumSeries(), children);
+
+        return child;
+    }
+
 }
