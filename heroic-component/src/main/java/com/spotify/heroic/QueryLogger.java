@@ -21,7 +21,6 @@
 
 package com.spotify.heroic;
 
-import com.spotify.heroic.Query;
 import com.spotify.heroic.metric.QueryResult;
 
 public interface QueryLogger {

@@ -21,9 +21,6 @@
 
 package com.spotify.heroic;
 
-import com.spotify.heroic.Query;
-import com.spotify.heroic.QueryLogger;
-import com.spotify.heroic.QueryOriginContext;
 import com.spotify.heroic.common.OptionalLimit;
 import com.spotify.heroic.metric.QueryResult;
 import com.spotify.heroic.metric.QueryTrace;
