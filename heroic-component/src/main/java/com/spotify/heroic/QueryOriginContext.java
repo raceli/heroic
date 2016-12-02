@@ -36,7 +36,7 @@ public class QueryOriginContext {
     private final UUID   queryId;
     private final String queryString;
 
-    public static QueryOriginContext of() {
+    public static QueryOriginContext empty() {
         return new QueryOriginContext("", "", 0, "", "", UUID.randomUUID(), "");
     }
 

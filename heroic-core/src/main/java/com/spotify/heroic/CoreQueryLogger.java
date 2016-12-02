@@ -70,7 +70,7 @@ public class CoreQueryLogger implements QueryLogger {
             originContext = query.getOriginContext().get();
             idString = originContext.getQueryId().toString();
         } else {
-            originContext = QueryOriginContext.of();
+            originContext = QueryOriginContext.empty();
             idString = "";
         }
 
@@ -111,7 +111,7 @@ public class CoreQueryLogger implements QueryLogger {
         final QueryTrace trace = result.getTrace();
         final List<ShardedResultGroup> groups = result.getGroups();
         final QueryOriginContext originContext = query.getOriginContext()
-            .orElse(QueryOriginContext.of());
+            .orElse(QueryOriginContext.empty());
 
         log.info("QueryResult:logQueryDone entering");
 
