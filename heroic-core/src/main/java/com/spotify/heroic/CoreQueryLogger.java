@@ -56,7 +56,7 @@ public class CoreQueryLogger implements QueryLogger {
 
     @Inject
     public CoreQueryLogger(@Named ("logQueriesThresholdDataPoints") final OptionalLimit
-                               logQueriesThresholdDataPoints) {
+        logQueriesThresholdDataPoints) {
         this.logQueriesThresholdDataPoints = logQueriesThresholdDataPoints;
     }
 
