@@ -97,16 +97,14 @@ public class CoreQueryManager implements QueryManager {
     private final QueryCache queryCache;
     private final AggregationFactory aggregations;
     private final OptionalLimit groupLimit;
-    private boolean logQueries;
-    private OptionalLimit logQueriesThresholdDataPoints;
+    private final QueryLogger queryLogger;
 
     @Inject
     public CoreQueryManager(
         @Named("features") final Features features, final AsyncFramework async,
         final ClusterManager cluster, final QueryParser parser, final QueryCache queryCache,
         final AggregationFactory aggregations, @Named("groupLimit") final OptionalLimit groupLimit,
-        @Named("logQueries") final boolean logQueries,
-        @Named ("logQueriesThresholdDataPoints") final OptionalLimit logQueriesThresholdDataPoints
+        CoreQueryLogger queryLogger
     ) {
         this.features = features;
         this.async = async;
@@ -115,8 +113,7 @@ public class CoreQueryManager implements QueryManager {
         this.queryCache = queryCache;
         this.aggregations = aggregations;
         this.groupLimit = groupLimit;
-        this.logQueries = logQueries;
-        this.logQueriesThresholdDataPoints = logQueriesThresholdDataPoints;
+        this.queryLogger = queryLogger;
     }
 
     @Override
@@ -182,6 +179,11 @@ public class CoreQueryManager implements QueryManager {
 
         @Override
         public AsyncFuture<QueryResult> query(Query q) {
+            boolean shouldLogQueries = features.hasFeature(Feature.LOG_QUERIES);
+            if (shouldLogQueries) {
+                queryLogger.logQueryAccess(q);
+            }
+
             final List<AsyncFuture<QueryResultPart>> futures = new ArrayList<>();
 
             final MetricType source = q.getSource().orElse(MetricType.POINT);
@@ -238,11 +240,17 @@ public class CoreQueryManager implements QueryManager {
 
                 final OptionalLimit limit = options.getGroupLimit().orElse(groupLimit);
 
-                return async.collect(futures,
-                    QueryResult.collectParts(QUERY, range, combiner, limit,
-                                         request,
-                                         q.getRequestMetadata().orElse(new QueryRequestMetadata()),
-                                         logQueries, logQueriesThresholdDataPoints));
+                AsyncFuture<QueryResult> queryResult = async.collect(futures,
+                    QueryResult.collectParts(QUERY, range, combiner, limit));
+
+                if (shouldLogQueries) {
+                    queryResult = queryResult.directTransform(_queryResult -> {
+                        queryLogger.logQueryResolved(q, _queryResult);
+                        return _queryResult;
+                    });
+                }
+
+                return queryResult;
             });
         }
 
