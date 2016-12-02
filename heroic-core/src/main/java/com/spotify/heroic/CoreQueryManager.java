@@ -250,7 +250,7 @@ public class CoreQueryManager implements QueryManager {
                     });
                     /*
                      * FIXME: Is this a suitable place to do catchFailed and catchCancelled to log
-                     * those? What to return? An empty QueryResult? Or is that handled somewhere else?
+                     * those? Return an empty QueryResult? Or is that handled somewhere else?
                      */
                 }
 
